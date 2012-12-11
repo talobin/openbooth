@@ -1,0 +1,1365 @@
+#include "opencv2/highgui/highgui.hpp"
+#include "opencv2/imgproc/imgproc.hpp"
+
+#include <ctype.h>
+#include <stdio.h>
+#include <iostream>
+#include "Cv.h"
+#include <time.h>
+
+using namespace cv;
+using namespace std;
+
+void help()
+{
+  cout <<
+		"\nPHOTO BOOTH HAI VO VERSION" << endl;
+}
+//FOr INTRO
+#define NUMBER 100
+#define DELAY 5
+char wndname[] = "OpenBooth";
+//Globel
+int type = 7;
+int max_type = 8;
+
+// For laplace effect
+int sigma = 3;
+int smoothType = CV_GAUSSIAN;
+// For invert
+int method = CV_LU;
+// For mono
+int nConvertColorType = CV_RGB2GRAY;
+BYTE nThreshold = 74;
+int m_nThresholdType = 1;
+//For canny
+int nCannyMin = 0;
+BYTE nCannyThreshold = 10;
+int m_nCannyType = 3;
+// For pixelize
+int sliderPosition = 9; // Initial slider position
+int divisions = 32;	// Initial number of divisions
+int blockXSize;         // Horizontal block size
+int blockYSize;         // Vertical block size
+int pixelCount;         // The number of pixels in a block (blockXSize multiplied by blockYSize)
+int width;              // The width  of the input stream
+int height;             // The height of the input stream
+// For Sobel
+int sobel_X = 1;
+int sobel_y = 0;
+int sobel_aperture = 7;
+int multiple = 0;
+//For blur
+int blur_size = 5;
+int blur_inter = 2;
+int kernel = 0;
+int blur_type = 0;
+//For saving file
+char  file_count = 'a';
+time_t seconds;
+stringstream utl;
+
+void save_screen(IplImage * pDest)
+{
+	//String  file = "C:\\Images\\Image" + file_count + '.jpg';
+			//const char * filem = file.c_str();
+			//cvSaveImage( filem ,pDest);
+			// c pressed, capture an image
+			seconds = time (NULL);
+			utl.str("");
+			utl << "Open_Booth" << seconds << ".jpg";
+			if(!cvSaveImage(utl.str().c_str(),pDest))
+				cout << "Could not save file: " << utl.str() << endl;
+			else
+				cout << "Saved file as: " << utl.str() << endl;
+			//PlaySound("sound.wav", NULL, SND_FILENAME | SND_ASYNC);
+			Sleep( 1000 );
+}
+
+void Sepia(CvCapture * cap)
+{
+	IplImage* pFrame = NULL;
+	pFrame = cvQueryFrame(cap);
+	int c;
+	int brighttype = 0;
+	//.393) + (g_pixel *.769) + (b_pixel * .189);
+	double par1 =0.45999;
+	double par2 =1;
+	double par3 =1.59 ;
+	IplImage* sepia_image = cvCreateImage(cvSize(pFrame->width, pFrame->height), IPL_DEPTH_8U, 3);
+	
+	uchar *ptr;
+	
+	int width = pFrame->width;
+	int height = pFrame->height;
+	while(1)
+	{
+		pFrame = cvQueryFrame(cap);
+		//cvNot(pFrame,pFrame);
+		for (int  xLoop = 0;xLoop<width;xLoop ++)
+		{
+			for( int yLoop = 0;yLoop < height;yLoop++)
+			{
+					ptr = cvPtr2D(pFrame, yLoop , xLoop , NULL);
+				
+					int r_pixel = ptr [0];
+        			int g_pixel = ptr [1];
+        	        int b_pixel = ptr [2];
+					int outputRed ;
+        			int outputGreen;
+        			int outputBlue;
+
+					if(brighttype ==1)
+					{
+					int newcolor = (int)((r_pixel+g_pixel+b_pixel) / 3); 
+					int sepia[3] = {145,65,10}; // "red" => 145,  "green" => 65,  "blue" => 10 
+
+					double mix[2] = {0.7,0.3}; // "o" => 0.7, "d" => 0.3 
+					outputRed = (newcolor*mix[0] + sepia[0]*mix[1]); 
+					outputGreen = (newcolor*mix[0] + sepia[1]*mix[1]); 
+					outputBlue = (newcolor*mix[0] + sepia[2]*mix[1]); 
+					}
+					else
+					{
+        			outputRed = ((r_pixel *.393) + (g_pixel *.769) + (b_pixel * .189))*par1;
+					outputGreen = ((r_pixel *.393) + (g_pixel *.769) + (b_pixel * .189))*par2;
+					outputBlue = ((r_pixel * .393) + (g_pixel *.769) + (b_pixel * .189))*par3;
+        			//outputGreen = (r_pixel * .349) + (g_pixel *.686) + (b_pixel * .168);
+        			//outputBlue = (r_pixel * .272) + (g_pixel *.534) + (b_pixel * .131);
+					}
+        			if(outputRed>255)outputRed=255;
+        			if(outputGreen>255)outputGreen=255;
+        			if(outputBlue>255)outputBlue=255;
+				
+					ptr [0] = outputRed;
+        			ptr [1] = outputGreen;
+        			ptr [2] = outputBlue;
+					//int temp = ptr[1];
+					//ptr[1]=ptr[2];
+					//ptr[2]=temp;
+					//ptr[0]=0;
+
+					//ptr [0] = r_pixel;
+        			//ptr [1] = g_pixel;
+        			//ptr [2] = b_pixel;
+				
+			}
+		}
+		cvShowImage("Sepia",pFrame );
+		c = cvWaitKey(20);
+		if (c == 'p')
+		{
+			//brighttype++;
+			if (brighttype >= 1)
+				brighttype = 0;
+			else
+				brighttype++;
+		}
+		if (c== 'o')
+		{
+			if (brighttype <= 0)
+				brighttype = 1;
+			else
+				brighttype--;
+		}
+if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+if (c == 'a')
+		{
+			par1 += 0.01;
+		}
+if (c == 'z')
+		{
+			par1 -= 0.01;
+		}
+if (c == 's')
+		{
+			par2 += 0.01;
+		}
+if (c == 'x')
+		{
+			par2 -= 0.01;
+		}
+if (c == 'd')
+		{
+			par3 += 0.01;
+		}
+if (c == 'c')
+		{
+			par3 -= 0.01;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+		}
+		if (c=='v')
+		{
+			
+			
+			save_screen(pFrame);
+		}
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			break;
+	}
+	cvReleaseCapture( &cap );
+	cvDestroyWindow("Sepia");
+
+}
+
+void Xray(CvCapture * cap)
+{
+	IplImage* pFrame = NULL;
+	pFrame = cvQueryFrame(cap);
+	int c;
+	int brighttype = 0;
+	//.393) + (g_pixel *.769) + (b_pixel * .189);
+	double par1 =1;
+	double par2 =1;
+	double par3 =1 ;
+	IplImage* xray_image = cvCreateImage(cvSize(pFrame->width, pFrame->height), IPL_DEPTH_8U, 3);
+	
+	uchar *ptr;
+	
+	int width = pFrame->width;
+	int height = pFrame->height;
+	while(1)
+	{
+		pFrame = cvQueryFrame(cap);
+		
+		int ksize = (1*1)|1;
+		cvSmooth( pFrame, pFrame, 1, ksize, ksize,1, 1 );
+		//blur(pFrame,pFrame,Size(5,5),);
+		for (int  xLoop = 0;xLoop<width;xLoop ++)
+		{
+			for( int yLoop = 0;yLoop < height;yLoop++)
+			{
+					ptr = cvPtr2D(pFrame, yLoop , xLoop , NULL);
+				
+					int r_pixel = ptr [0];
+        			int g_pixel = ptr [1];
+        	        int b_pixel = ptr [2];
+
+					int Gray = g_pixel * 0.59*1.63 + b_pixel * 0.11 + r_pixel * 0.30;
+					if (Gray>255) Gray = 255;
+					ptr [0] = Gray*0.94;
+        			ptr [1] = Gray*0.88;
+        			ptr [2] = Gray*0.97;
+				
+			}
+		}
+		cvNot(pFrame,pFrame);
+		cvShowImage("Xray",pFrame );
+		c = cvWaitKey(20);
+		if (c == 'p')
+		{
+			//brighttype++;
+			if (brighttype >= 1)
+				brighttype = 0;
+			else
+				brighttype++;
+		}
+		if (c== 'o')
+		{
+			if (brighttype <= 0)
+				brighttype = 1;
+			else
+				brighttype--;
+		}
+			
+		if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+			break;
+		}
+if (c == 'a')
+		{
+			par1 += 0.01;
+		}
+if (c == 'z')
+		{
+			par1 -= 0.01;
+		}
+if (c == 's')
+		{
+			par2 += 0.01;
+		}
+if (c == 'x')
+		{
+			par2 -= 0.01;
+		}
+if (c == 'd')
+		{
+			par3 += 0.01;
+		}
+if (c == 'c')
+		{
+			par3 -= 0.01;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+		}
+		if (c=='v')
+		{
+			
+			
+			save_screen(pFrame);
+		}
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			break;
+	}
+	cvReleaseCapture( &cap );
+	cvDestroyWindow("Xray");
+
+}
+
+void laplace (CvCapture * cap)
+{
+	//  Mat smoothed, laplace, result;
+	IplImage* smoothed =NULL;
+	IplImage *laplace = NULL;
+	IplImage* planes[3] = { 0, 0, 0 };
+	for(;;)
+	{
+		IplImage* frame = 0;
+		int i, c, ksize;
+		frame = cvQueryFrame( cap );
+		if( !frame )
+			break;
+		if( !laplace )
+		{
+			for( i = 0; i < 3; i++ )
+				planes[i] = cvCreateImage( cvGetSize(frame), 8, 1 );
+			laplace = cvCreateImage( cvGetSize(frame), IPL_DEPTH_16S, 1 );
+			smoothed = cvCreateImage( cvGetSize(frame), 8, 3 );
+		}
+		ksize = (sigma*5)|1;
+		cvSmooth( frame, smoothed, smoothType, ksize, ksize, sigma, sigma );
+		cvSplit( smoothed, planes[0], planes[1], planes[2], 0 );
+		for( i = 0; i < 3; i++ )
+		{
+			cvLaplace( planes[i], laplace, 5 );
+			cvConvertScaleAbs( laplace, planes[i], (sigma+1)*0.25, 0 );
+		}
+		cvMerge( planes[0], planes[1], planes[2], 0, smoothed );
+		smoothed->origin = frame->origin;
+
+		cvShowImage("Laplacian", smoothed );
+
+		c = cvWaitKey(30);
+		if( c == ' ' )
+			smoothType = smoothType == CV_GAUSSIAN ? CV_BLUR : smoothType == CV_BLUR ? CV_MEDIAN : CV_GAUSSIAN;
+		if (c == 'p')
+		{
+			if (sigma >= 14)
+				sigma = 15;
+			else
+				sigma++;
+		}
+		if (c== 'o')
+		{
+			if (sigma <= 1)
+				sigma = 0;
+			else
+				sigma--;
+		}
+		if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+			break;
+		}
+		if (c=='c')
+		{
+			
+			
+			save_screen(smoothed);
+		}
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			break;
+	}
+
+	cvReleaseCapture( &cap );
+	cvDestroyWindow("Laplacian");
+
+
+}
+
+
+void invert(CvCapture * cap)
+{
+	IplImage*       tmp_frame = NULL;
+	IplImage*       result=NULL;
+	for(;;)
+	{
+
+		tmp_frame = cvQueryFrame(cap);
+		if(!tmp_frame)
+			break;
+		cvShowImage("YOUR FACE", tmp_frame);
+		int c = waitKey(30);
+		if( c == ' ' )
+			smoothType = smoothType == CV_GAUSSIAN ? CV_BLUR : smoothType == CV_BLUR ? CV_MEDIAN : CV_GAUSSIAN;
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			break;
+		if (c == 'p')
+		{
+			if (sigma >= 14)
+				sigma = 15;
+			else
+				sigma++;
+		}
+	}
+
+
+
+
+}
+//Mono Color
+void mono(CvCapture * cap)
+{
+	nThreshold = 74;
+	BYTE nMaxValue = 255;
+	//CvCapture* pCapture = cvCaptureFromCAM(0);	
+	IplImage* pFrame = NULL;
+	pFrame = cvQueryFrame(cap);
+	IplImage* result =cvCloneImage(pFrame);
+	IplImage *pDest = NULL;
+	bool quit = false;
+	while (quit == false)
+	{
+		// Grab a frame from the webcam
+		pFrame = cvQueryFrame(cap);
+		result = cvCloneImage(pFrame);
+		//Create mono chanel image
+		pDest = cvCreateImage(cvGetSize(result), result->depth, 1);
+		// Do the conversion
+		cvCvtColor(result,pDest,nConvertColorType);
+
+		// Draw the original frame and low resolution version
+		//cvShowImage("WebCam", pFrame);
+
+		cvThreshold(pDest, pDest, nThreshold, nMaxValue, m_nThresholdType);
+		cvShowImage("Black and White", pDest);
+		int c = waitKey(30);
+		if( c == ' ' )
+		{
+			if ( m_nThresholdType >= 4) 
+				m_nThresholdType = 0;
+			else
+				m_nThresholdType+=1;
+		}
+		if (c=='c')
+		{
+			
+			save_screen(pDest);
+		}
+		if (c == 'p')
+		{
+			if (nThreshold >= 250)
+				nThreshold = 255;
+			else
+				nThreshold+= 5;
+		}
+		if (c== 'o')
+		{
+			if (nThreshold <= 5)
+				nThreshold = 0;
+			else
+				nThreshold-=5;
+		}
+		if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+			break;
+		}
+		if (c=='c')
+		{
+			
+			
+			save_screen(pDest);
+		}
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			break;
+	} // End of while loop
+
+
+	// Release our images & destroy all windows
+
+	cvReleaseCapture( &cap );
+	cvDestroyWindow("Black and White");
+}
+
+void onDivisionSlide(int theSliderValue)
+{
+	// Put a lower limit of 1 on our slider position
+	if (sliderPosition < 0)
+	{
+		sliderPosition = 1;
+	}
+
+	// Set the number of divisions depending on the slider location
+	// Factors of both 640 and 480: 1, 2, 4, 5, 8, 10, 16, 20, 32, 40, 160
+	switch (theSliderValue)
+	{
+	case 1:
+		divisions = 1;
+		break;
+
+	case 2:
+		divisions = 2;
+		break;
+
+	case 3:
+		divisions = 4;
+		break;
+
+	case 4:
+		divisions = 5;
+		break;
+
+	case 5:
+		divisions = 8;
+		break;
+
+	case 6:
+		divisions = 10;
+		break;
+
+	case 7:
+		divisions = 16;
+		break;
+
+	case 8:
+		divisions = 20;
+		break;
+
+	case 9:
+		divisions = 32;
+		break;
+
+	case 10:
+		divisions = 40;
+		break;
+
+	case 11:
+		divisions = 160;
+		break;
+
+	default:
+		break;
+	}
+
+	// Recalculate our block sizes and pixelCount for the new number of divisions
+	blockXSize = width  / divisions;
+	blockYSize = height / divisions;
+
+	pixelCount = blockXSize * blockYSize;
+}
+//Canny
+void canny(CvCapture * cap)
+{
+	nThreshold = 84;
+	BYTE nMaxValue = 255;
+	//CvCapture* pCapture = cvCaptureFromCAM(0);	
+	IplImage* pFrame = NULL;
+	pFrame = cvQueryFrame(cap);
+	IplImage* result =cvCloneImage(pFrame);
+	IplImage *pDest = NULL;
+	bool quit = false;
+	while (quit == false)
+	{
+		// Grab a frame from the webcam
+		pFrame = cvQueryFrame(cap);
+		result = cvCloneImage(pFrame);
+		//Create mono chanel image
+		pDest = cvCreateImage(cvGetSize(result), result->depth, 1);
+		// Do the conversion
+		cvCvtColor(result,pDest,nConvertColorType);
+
+		// Draw the original frame and low resolution version
+		//cvShowImage("WebCam", pFrame);
+		//Pre processing
+
+		cvErode(pDest,pDest);
+		cvDilate(pDest,pDest);	
+
+		cvErode(pDest,pDest);
+		cvDilate(pDest,pDest);	
+
+		cvErode(pDest,pDest);
+		cvDilate(pDest,pDest);	
+		cvDilate(pDest,pDest);
+		cvCanny(pDest, pDest, nCannyThreshold, nCannyMin,m_nCannyType );
+		//cvThreshold(pDest, pDest, nThreshold, nMaxValue, m_nThresholdType);
+		cvShowImage("Canny", pDest);
+		int c = waitKey(30);
+		if( c == ' ' )
+		{
+			if ( m_nCannyType >= 7) 
+				m_nCannyType = 3;
+			else
+				m_nCannyType+=2;
+		}
+		if (c=='c')
+		{
+			
+			
+			save_screen(pDest);
+		}
+		if(m_nCannyType == 5)
+		{
+			if (c == 'p')
+			{
+				if (nCannyMin >= 814)
+					nCannyMin = 824;
+				else
+					nCannyMin+= 10;
+			}
+			if (c== 'o')
+			{
+				if (nCannyMin <= 10)
+					nCannyMin = 0;
+				else
+					nCannyMin-=10;
+			}
+			nCannyThreshold = nCannyMin+200;
+		}
+		else
+		{
+			if (c == 'p')
+			{
+				nCannyThreshold+= 5;
+				if (nCannyThreshold >= 500)
+					nCannyThreshold = 505;
+			}
+			if (c== 'o')
+			{
+				nCannyThreshold-=5;
+				if (nCannyThreshold <= 5)
+					nCannyThreshold = 0;
+					
+			}
+			nCannyMin= 0;
+		}
+		if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+			break;
+		}
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			break;
+	} // End of while loop
+
+
+	// Release our images & destroy all windows
+
+	cvReleaseCapture( &cap );
+	cvDestroyWindow("Canny");
+	
+}
+//PIXELIZED
+void pixelize(CvCapture * cap)
+{
+	int maxSliderValue = 11;
+
+	// Create the divisions slider lider
+	cvCreateTrackbar("Divisions", "Low Rez Stream", &sliderPosition, maxSliderValue, onDivisionSlide);
+
+	// Start capturing data from the web cam
+	CvCapture* pCapture = cvCaptureFromCAM(0);
+
+	// Get an initial frame so we know the size of things (cvQueryFrame is a combination of cvGrabFrame and cvRetrieveFrame)
+	IplImage* pFrame = NULL;
+	pFrame = cvQueryFrame(pCapture);
+
+	// Create an image the same size and colour-depth as our input stream
+	IplImage* pLowRezFrame = cvCreateImage(cvSize(pFrame->width, pFrame->height), IPL_DEPTH_8U, 3);
+
+	uchar *ptr; // Pointer to our pixel
+
+	int red, green, blue; // Integers to hold our pixel values
+
+	// Get the width and height of our webcam input stream
+	int width  = pFrame->width;
+	int height = pFrame->height;
+
+	// Integers to hold our total colour values (used to find the average)
+	int redSum     = 0;
+	int greenSum   = 0;
+	int blueSum    = 0;
+
+	// Loop controling vars
+	char c;
+	bool quit = false;
+
+	while (quit == false)
+	{
+		// Grab a frame from the webcam
+		pFrame = cvQueryFrame(pCapture);
+		// Draw the original frame and low resolution version
+		//cvShowImage("WebCam", pFrame);
+		cvShowImage("Low Rez", pLowRezFrame);
+
+		// Calculate our blocksize per frame to cater for slider
+		blockXSize = width  / divisions;
+		blockYSize = height / divisions;
+
+		pixelCount = blockXSize * blockYSize; // How many pixels we'll read per block - used to find the average colour
+
+		//cout << "At " << divisions << " divisions (Block size " << blockXSize << "x" << blockYSize << ", so " << pixelCount << " pixels per block)" << endl;
+
+		// Loop through each block horizontally
+		for (int xLoop = 0; xLoop < width; xLoop += blockXSize)
+		{
+
+			// Loop through each block vertically
+			for (int yLoop = 0; yLoop < height; yLoop += blockYSize)
+			{
+
+				// Reset our colour counters for each block
+				redSum     = 0;
+				greenSum   = 0;
+				blueSum    = 0;
+
+				// Read every pixel in the block and calculate the average colour
+				for (int pixXLoop = 0; pixXLoop < blockXSize; pixXLoop++)
+				{
+
+					for (int pixYLoop = 0; pixYLoop < blockYSize; pixYLoop++)
+					{
+
+						// Get the pixel colour from the webcam stream
+						ptr = cvPtr2D(pFrame, yLoop + pixYLoop, xLoop + pixXLoop, NULL);
+
+						// Add each component to its sum
+						redSum   += ptr[2];
+						greenSum += ptr[1];
+						blueSum  += ptr[0];
+
+					} // End of inner y pixel counting loop
+
+				} // End of outer x pixel countier loop
+
+				// Calculate the average colour of the block
+				red   = redSum   / pixelCount;
+				green = greenSum / pixelCount;
+				blue  = blueSum  / pixelCount;
+
+				// Draw a rectangle of the average colour
+				cvRectangle(
+					pLowRezFrame,
+					cvPoint(xLoop, yLoop),
+					cvPoint(xLoop + blockXSize, yLoop + blockYSize),
+					CV_RGB(red, green, blue),
+					CV_FILLED,
+					8,
+					0
+					);
+
+			} // End of inner y loop
+
+		} // End of outer x loop
+
+		// Wait 20 milliseconds
+		c = cvWaitKey(20);
+
+		// Set the flag to quit if the key pressed was escape
+		if (c == 'p')
+		{
+			if (sliderPosition >= maxSliderValue-1)
+				sliderPosition = maxSliderValue;
+			else
+				sliderPosition++;
+		}
+		if (c=='c')
+		{
+			
+			
+			save_screen(pLowRezFrame);
+		}
+		if (c== 'o')
+		{
+			if (sliderPosition <= 1)
+				sliderPosition = 0;
+			else
+				sliderPosition--;
+		}
+		onDivisionSlide(sliderPosition);
+		if (c == 27)
+		{
+			quit = true;
+		}
+		if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+			break;
+		}
+
+	} // End of while loop
+
+	// Release our stream capture object
+	cvReleaseCapture(&pCapture);
+	cvDestroyWindow("Low Rez");
+	cvDestroyWindow("Webcam");
+
+}
+void sobel(CvCapture * cap)
+{
+	//CvCapture* pCapture = cvCaptureFromCAM(0);	
+	IplImage* pFrame = NULL;
+	pFrame = cvQueryFrame(cap);
+	IplImage* result =cvCloneImage(pFrame);
+	IplImage *pDest = NULL;
+	bool quit = false;
+	while (quit == false)
+	{
+		// Grab a frame from the webcam
+		pFrame = cvQueryFrame(cap);
+		result = cvCloneImage(pFrame);
+		//Create mono chanel image
+		int Depth = result->depth;
+				if (Depth == IPL_DEPTH_8U)Depth = IPL_DEPTH_16S;  
+		pDest = cvCreateImage(cvGetSize(result), Depth, result->nChannels);
+		// Do the conversion
+		//cvCvtColor(result,pDest,nConvertColorType);
+		if(multiple !=0)
+		{
+			for (int i = 0 ; i<multiple;i++)
+				cvAdd(result,result,result);
+		}
+		cvSobel(result, pDest, sobel_X, sobel_y,sobel_aperture );
+		//cvThreshold(pDest, pDest, nThreshold, nMaxValue, m_nThresholdType);
+		cvShowImage("Engraving", pDest);
+		int c = waitKey(30);
+		if( c == ' ' )
+		{
+			if ( sobel_aperture >= 7) 
+				sobel_aperture = 1;
+			else
+				sobel_aperture+=2;
+		}
+		if (c == 'p')
+		{
+				multiple++;
+		}
+		if (c== 'o')
+		{
+				multiple--;
+				if (multiple <=0)
+					multiple = 0;
+		}
+		if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+			break;
+		}
+		if (c=='c')
+		{
+			
+			
+			save_screen(pDest);
+		}
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			break;
+	} // End of while loop
+
+
+	// Release our images & destroy all windows
+
+	cvReleaseCapture( &cap );
+	cvDestroyWindow("Engraving");
+}
+//Blur Effect
+void blur(CvCapture * cap)
+{
+	//CvCapture* pCapture = cvCaptureFromCAM(0);	
+	IplImage* pFrame = NULL;
+	pFrame = cvQueryFrame(cap);
+	IplImage* result =NULL;
+	IplImage *pDest = NULL;
+	bool quit = false;
+	while (quit == false)
+	{
+		// Grab a frame from the webcam
+		pFrame = cvQueryFrame(cap);
+		
+		//Prepare kernel
+		IplConvKernel *m_pKernel;
+		m_pKernel = cvCreateStructuringElementEx(blur_size, blur_size, blur_size / 2, blur_size / 2, kernel);
+		
+
+		switch (blur_type)
+			{
+			case 0:
+				cvErode(pFrame, pFrame, m_pKernel, blur_inter);
+				break;
+			case 1:
+				cvDilate(pFrame, pFrame, m_pKernel, blur_inter);
+				break;
+			case 2:
+			case 3:
+				cvMorphologyEx(pFrame, pFrame, result, m_pKernel, blur_type, blur_inter);
+				break;
+			case 4:
+				
+			case 5:
+			case 6:
+				result = cvCloneImage(pFrame);
+				cvMorphologyEx(pFrame, pFrame, result, m_pKernel, blur_type, blur_inter);
+					break;
+		}
+
+		//cvSobel(result, pDest, sobel_X, sobel_y,sobel_aperture );
+		//cvThreshold(pDest, pDest, nThreshold, nMaxValue, m_nThresholdType);
+		cvShowImage("Blur", pFrame);
+		int c = waitKey(30);
+		if( c == ' ' )
+		{
+			kernel = kernel == 0 ? 1 : kernel == 1 ? 2 : 0;
+		}
+		if (c=='c')
+		{
+			
+			
+			save_screen(pFrame);
+		}
+		if (c == 'p')
+		{
+				blur_type++;
+				if (blur_type >= 7)
+					blur_type = 0;
+		}
+		if (c== 'o')
+		{
+				blur_size++;
+				if (blur_size >=20)
+					blur_size = 1;
+		}
+		if (c== 'l')
+		{
+				blur_size--;
+				if (blur_size <=1)
+					blur_size = 1;
+		}
+		if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+			break;
+		}
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			break;
+	} // End of while loop
+
+
+	// Release our images & destroy all windows
+
+	cvReleaseCapture( &cap );
+	cvDestroyWindow("Blur");
+}
+//Mirror Effect
+void mirror (CvCapture * cap)
+{
+//CvCapture* pCapture = cvCaptureFromCAM(0);	
+	IplImage* frame = NULL;
+	frame = cvQueryFrame(cap);
+	bool quit = false;
+	while (quit == false)
+	{
+		// Grab a frame from the webcam
+		frame = cvQueryFrame(cap);
+		
+		if( !frame ) {
+			cerr << "ERROR: Couldn't get a frame." << endl;
+			break;
+		}
+
+		//Split the piture in two halfs and mirror the left one to the right one
+			int halfFrame = frame->width/2;
+			int frameBytes = frame->width*3-1;
+			for(int i = 0; i < frame->height; i++) {
+				int offset = i*frame->width*3;
+				for(int j = 0; j < halfFrame; j++) {
+					int jBytes = offset+frameBytes-(j*3);
+					int ojBytes = offset+(j*3);
+					frame->imageData[jBytes-2] = frame->imageData[ojBytes];
+					frame->imageData[jBytes-1] = frame->imageData[ojBytes+1];
+					frame->imageData[jBytes] = frame->imageData[ojBytes+2];
+				}
+			
+		}
+
+		//cvThreshold(pDest, pDest, nThreshold, nMaxValue, m_nThresholdType);
+		cvShowImage("Mirror", frame);
+		int c = waitKey(30);
+		
+		if (c == 'i')
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type = 0;
+			break;
+		}
+		if (c == 'u')
+		{
+			if (type > 0)
+				type --;
+			else
+				type = max_type;
+			break;
+		}
+		if (c=='c')
+		{
+			
+			
+			save_screen(frame);
+		}
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			break;
+	} // End of while loop
+
+
+	// Release our images & destroy all windows
+
+	cvReleaseCapture( &cap );
+	cvDestroyWindow("Mirror");
+}
+CvScalar random_color(CvRNG* rng)
+{
+    int icolor = cvRandInt(rng);
+    return CV_RGB(icolor&255, (icolor>>8)&255, (icolor>>16)&255);
+}
+
+//Intro Fucntion
+int intro()
+{ int line_type = CV_AA; // change it to 8 to see non-antialiased graphics
+    int i;
+    CvPoint pt1,pt2;
+    double angle;
+    CvSize sz;
+    CvPoint  ptt[6];
+    CvPoint* pt[2];
+    int  arr[2];
+    CvFont font;
+    CvRNG rng;
+    int width = 1000, height = 700;
+    int width3 = width*3, height3 = height*3;
+    CvSize text_size;
+    int ymin = 0;
+    // Load the source image
+    IplImage* image = cvCreateImage( cvSize(width,height), 8, 3 );
+    IplImage* image2;
+
+    // Create a window
+    cvNamedWindow(wndname, 1 );
+    cvZero( image );
+    cvShowImage(wndname,image);
+    cvWaitKey(DELAY);
+
+    rng = cvRNG((unsigned)-1);
+    pt[0] = &(ptt[0]);
+    pt[1] = &(ptt[3]);
+
+    arr[0] = 3;
+    arr[1] = 3;
+
+    for (i = 0; i< NUMBER; i++)
+    {
+        pt1.x=cvRandInt(&rng) % width3 - width;
+        pt1.y=cvRandInt(&rng) % height3 - height;
+        pt2.x=cvRandInt(&rng) % width3 - width;
+        pt2.y=cvRandInt(&rng) % height3 - height;
+
+        cvLine( image, pt1, pt2, random_color(&rng), cvRandInt(&rng)%10, line_type, 0 );
+        cvShowImage(wndname,image);
+        if(cvWaitKey(DELAY) >= 0) return 0;
+    }
+
+    for (i = 0; i< NUMBER; i++)
+    {
+        pt1.x=cvRandInt(&rng) % width3 - width;
+        pt1.y=cvRandInt(&rng) % height3 - height;
+        pt2.x=cvRandInt(&rng) % width3 - width;
+        pt2.y=cvRandInt(&rng) % height3 - height;
+
+        cvRectangle( image,pt1, pt2, random_color(&rng), cvRandInt(&rng)%10-1, line_type, 0 );
+        cvShowImage(wndname,image);
+        if(cvWaitKey(DELAY) >= 0) return 0;
+    }
+
+    for (i = 0; i< NUMBER; i++)
+    {
+        pt1.x=cvRandInt(&rng) % width3 - width;
+        pt1.y=cvRandInt(&rng) % height3 - height;
+        sz.width =cvRandInt(&rng)%200;
+        sz.height=cvRandInt(&rng)%200;
+        angle = (cvRandInt(&rng)%1000)*0.180;
+
+        cvEllipse( image, pt1, sz, angle, angle - 100, angle + 200,
+                   random_color(&rng), cvRandInt(&rng)%10-1, line_type, 0 );
+        cvShowImage(wndname,image);
+        if(cvWaitKey(DELAY) >= 0) return 0;
+    }
+
+    for (i = 0; i< NUMBER; i++)
+    {
+        pt[0][0].x=cvRandInt(&rng) % width3 - width;
+        pt[0][0].y=cvRandInt(&rng) % height3 - height;
+        pt[0][1].x=cvRandInt(&rng) % width3 - width;
+        pt[0][1].y=cvRandInt(&rng) % height3 - height;
+        pt[0][2].x=cvRandInt(&rng) % width3 - width;
+        pt[0][2].y=cvRandInt(&rng) % height3 - height;
+        pt[1][0].x=cvRandInt(&rng) % width3 - width;
+        pt[1][0].y=cvRandInt(&rng) % height3 - height;
+        pt[1][1].x=cvRandInt(&rng) % width3 - width;
+        pt[1][1].y=cvRandInt(&rng) % height3 - height;
+        pt[1][2].x=cvRandInt(&rng) % width3 - width;
+        pt[1][2].y=cvRandInt(&rng) % height3 - height;
+
+        cvPolyLine( image, pt, arr, 2, 1, random_color(&rng), cvRandInt(&rng)%10, line_type, 0 );
+        cvShowImage(wndname,image);
+        if(cvWaitKey(DELAY) >= 0) return 0;
+    }
+
+    for (i = 0; i< NUMBER; i++)
+    {
+        pt[0][0].x=cvRandInt(&rng) % width3 - width;
+        pt[0][0].y=cvRandInt(&rng) % height3 - height;
+        pt[0][1].x=cvRandInt(&rng) % width3 - width;
+        pt[0][1].y=cvRandInt(&rng) % height3 - height;
+        pt[0][2].x=cvRandInt(&rng) % width3 - width;
+        pt[0][2].y=cvRandInt(&rng) % height3 - height;
+        pt[1][0].x=cvRandInt(&rng) % width3 - width;
+        pt[1][0].y=cvRandInt(&rng) % height3 - height;
+        pt[1][1].x=cvRandInt(&rng) % width3 - width;
+        pt[1][1].y=cvRandInt(&rng) % height3 - height;
+        pt[1][2].x=cvRandInt(&rng) % width3 - width;
+        pt[1][2].y=cvRandInt(&rng) % height3 - height;
+
+        cvFillPoly( image, pt, arr, 2, random_color(&rng), line_type, 0 );
+        cvShowImage(wndname,image);
+        if(cvWaitKey(DELAY) >= 0) return 0;
+    }
+
+    for (i = 0; i< NUMBER; i++)
+    {
+        pt1.x=cvRandInt(&rng) % width3 - width;
+        pt1.y=cvRandInt(&rng) % height3 - height;
+
+        cvCircle( image, pt1, cvRandInt(&rng)%300, random_color(&rng),
+                  cvRandInt(&rng)%10-1, line_type, 0 );
+        cvShowImage(wndname,image);
+        if(cvWaitKey(DELAY) >= 0) return 0;
+    }
+
+    for (i = 1; i< NUMBER; i++)
+    {
+        pt1.x=cvRandInt(&rng) % width3 - width;
+        pt1.y=cvRandInt(&rng) % height3 - height;
+
+        cvInitFont( &font, cvRandInt(&rng) % 8,
+                    (cvRandInt(&rng)%100)*0.05+0.1, (cvRandInt(&rng)%100)*0.05+0.1,
+                    (cvRandInt(&rng)%5)*0.1, cvRound(cvRandInt(&rng)%10), line_type );
+
+        cvPutText( image, "Welcome, welcome!", pt1, &font, random_color(&rng));
+        cvShowImage(wndname,image);
+        if(cvWaitKey(DELAY) >= 0) return 0;
+    }
+
+    cvInitFont( &font, CV_FONT_HERSHEY_COMPLEX, 3, 3, 0.0, 5, line_type );
+
+    cvGetTextSize( "OpenBooth!", &font, &text_size, &ymin );
+
+    pt1.x = (width - text_size.width)/2;
+    pt1.y = (height + text_size.height)/2;
+    image2 = cvCloneImage(image);
+
+    for( i = 0; i < 255; i++ )
+    {
+        cvSubS( image2, cvScalarAll(i), image, 0 );
+        cvPutText( image, "OpenBooth!", pt1, &font, CV_RGB(255,i,i));
+        cvShowImage(wndname,image);
+    }
+
+    // Wait for a key stroke; the same function arranges events processing
+   // cvWaitKey(0);
+    cvReleaseImage(&image);
+    cvReleaseImage(&image2);
+    cvDestroyWindow("OpenBooth");
+	return 0;
+
+}
+int main( int argc, char** argv )
+{
+	//intro();
+	//Get the camera stream
+	CvCapture*      cap = NULL;
+	IplImage* pFrame = NULL;
+	//Create windows
+	//namedWindow( "PHOTO BOOTH", 0 );
+	
+
+    
+	for(;;)
+
+	{
+
+		cap = cvCaptureFromCAM(0);
+		int c = waitKey(100);
+		if( c == ' ' )
+		{
+			if (type < max_type)
+				type ++;
+			else
+				type == 0;
+		}
+
+		if( c == 'q' || c == 'Q' || (c & 255) == 27 )
+			return 0;
+
+		switch (type)
+		{
+		case 0:
+			mono(cap);
+			break;
+		case 1:
+			laplace(cap);
+			break;
+		case 2:
+			pixelize(cap);
+			break;
+		case 3:
+			canny(cap);
+			break;
+		case 4:
+			sobel(cap);
+			break;
+		case 5:
+			blur(cap);
+			break;
+		case 6:
+			mirror(cap);
+			break;
+		case 7:
+			Sepia(cap);
+			break;
+		case 8:
+			Xray(cap);
+			break;
+		}
+	}
+	return 0;
+}
